@@ -8,6 +8,8 @@ import Utils.Utils.TreeIsEmptyException;
 import Utils.CLI;
 import Utils.readFile;
 import Utils.Config;
+import btree.btreeUtil;
+import com.sun.javafx.geom.transform.BaseTransform;
 
 
 public class MandyTree implements BTree {
@@ -31,22 +33,83 @@ public class MandyTree implements BTree {
 
     private static abstract class Node {
         //fill in your implementation about Node in common here
+        Node parent;
+        private Node() {}
+
+        List<Integer> values = new ArrayList<>();
+        public List<Integer> getIndex() {return values;}
+
+
     }
 
     //LeafNode
     private static class LeafNode extends Node {
         //fill in your implementation specific about LeafNode here
+        LeafNode next;
+        LeafNode previous;
+        private LeafNode () {
+            super();
+        }
+
+        private LeafNode (List<Integer> values) {
+            this.values.addAll(values);
+        }
+
     }
 
     //IndexNode
     private static class IndexNode extends Node {
         //fill in your implementation specific about IndexNode here
+
+        List<Node> childeren = new ArrayList<>();
+        private IndexNode () {
+            super();
+        }
+
+        private IndexNode (List<Integer> index, List<Node> childeren) {
+            this.values.addAll(index);
+            this.childeren.addAll(childeren);
+        }
+
     }
     /**
      * Insert key to tree
      * @param key
      */
     public void insert(Integer key) {
+        Node pointer = root;
+        while (pointer instanceof IndexNode) {
+            int pos = btreeUtil.binarySearch(pointer.getIndex(), key);
+            pointer = ((IndexNode) pointer).childeren.get(pos);
+        }
+        // insert into leaf node
+        insertLeaf(key,(LeafNode) pointer);
+    }
+
+    /**
+     * insert key to leaf node
+     */
+    public void insertLeaf(Integer key, LeafNode pointer) {
+        pointer.values.add(key);
+        pointer.values.sort(Comparator.naturalOrder()); // sort the leafnode first
+
+        if(pointer.values.size() <= DEGREE*2) {return;}
+        else {}
+    }
+
+    private List<Integer> splitList(List<Integer> list) {
+        List<Integer> newList = new ArrayList<>();
+        for(int i=0; i < list.size() ;i++) {
+            newList.add(list.get(DEGREE));
+            list.remove(DEGREE);
+        }
+        return newList;
+    }
+    private void splitLeaf (Node node) {
+        List splitlist = splitList(node.values);
+
+        nodeLeft.parent = node.parent;
+        //nodeRight.parent
     }
 
     /**
