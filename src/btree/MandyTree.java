@@ -77,13 +77,20 @@ public class MandyTree implements BTree {
      * @param key
      */
     public void insert(Integer key) {
-        Node pointer = root;
-        while (pointer instanceof IndexNode) {
-            int pos = btreeUtil.binarySearch(pointer.getIndex(), key);
-            pointer = ((IndexNode) pointer).childeren.get(pos);
+        if (root == null) {
+            Node first = new LeafNode();
+            first.values.add(key);
+            root = first;
         }
-        // insert into leaf node
-        insertLeaf(key,(LeafNode) pointer);
+        else {
+            Node pointer = root;
+            while (pointer instanceof IndexNode) {
+                int pos = btreeUtil.binarySearch(pointer.getIndex(), key);
+                pointer = ((IndexNode) pointer).childeren.get(pos);
+            }
+            // insert into leaf node
+            insertLeaf(key,(LeafNode) pointer);
+        }
     }
 
     /**
@@ -107,8 +114,8 @@ public class MandyTree implements BTree {
     }
     private void splitLeaf (Node node) {
         List splitlist = splitList(node.values);
+        Node splitnode = new LeafNode(splitlist);
 
-        nodeLeft.parent = node.parent;
         //nodeRight.parent
     }
 
