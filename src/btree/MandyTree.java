@@ -73,6 +73,20 @@ public class MandyTree implements BTree {
 
     }
     /**
+     *
+     */
+    public Stack<Node> searchNode (Integer key) {
+        Node pointer = root;
+        Stack<Node> searchPath = new Stack<>();
+        while (pointer instanceof IndexNode) {
+            int pos = btreeUtil.binarySearch(pointer.getIndex(), key);
+            searchPath.add(pointer);
+            pointer = ((IndexNode) pointer).childeren.get(pos);
+        }
+        searchPath.add(pointer);
+        return searchPath;
+    }
+    /**
      * Insert key to tree
      * @param key
      */
@@ -83,12 +97,9 @@ public class MandyTree implements BTree {
             root = first;
         }
         else {
-            Node pointer = root;
-            while (pointer instanceof IndexNode) {
-                int pos = btreeUtil.binarySearch(pointer.getIndex(), key);
-                pointer = ((IndexNode) pointer).childeren.get(pos);
-            }
+            Stack<Node> searchPath = searchNode(key);
             // insert into leaf node
+            Node pointer = searchPath.pop();
             Node splitnode = insertLeaf(key,(LeafNode) pointer);
             if (splitnode != null) {
                 insertIndex(splitnode, pointer, splitnode.values.get(0));
