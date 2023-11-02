@@ -80,6 +80,9 @@ public class MandyTree implements BTree {
         while (pointer instanceof IndexNode) {
             int pos = btreeUtil.binarySearch(pointer.getIndex(), key);
             searchPath.add(pointer);
+//            if(pos >= ((IndexNode) pointer).childeren.size()) {
+//                return searchPath;
+//            }
             pointer = ((IndexNode) pointer).childeren.get(pos);
         }
         searchPath.add(pointer);
@@ -98,8 +101,15 @@ public class MandyTree implements BTree {
         }
         else {
             Stack<Node> searchPath = searchNode(key);
+
             // insert into leaf node
             Node pointer = searchPath.pop();
+//            if (pointer instanceof IndexNode) {
+//                Node newNode = new LeafNode();
+//                newNode.values.add(key);
+//                ((IndexNode) pointer).childeren.add(newNode);
+//                return;
+//            }
             Node splitnode = insertLeaf(key,(LeafNode) pointer);
             int popUpkey = splitnode.values.get(0);
             while (splitnode != null) {
@@ -205,7 +215,25 @@ public class MandyTree implements BTree {
      * @return List of keys
      */
     public List<Integer> search(Integer key1, Integer key2) {
-        return (new ArrayList<Integer>());
+        Node pointer = root;
+        List<Integer> leafNode;
+        List<Integer> result = new ArrayList<>();
+        while (pointer instanceof IndexNode) {
+            int pos = btreeUtil.binarySearch(pointer.getIndex(), key1);
+            pointer = ((IndexNode) pointer).childeren.get(pos);
+        }
+        leafNode = pointer.values;
+        if (leafNode.get(leafNode.size()-1) < key1) {return null;}
+        else {
+            int pos = btreeUtil.binarySearch(leafNode, key1)-1;
+            if (leafNode.get(pos) != key1) {pos++;}
+
+            while (leafNode.get(pos) <= key2) {
+                if (pos <= leafNode.size()) {result.add(leafNode.get(pos));pos++;}
+                else {pos=0; leafNode = ((LeafNode) pointer).next.values;}
+            }
+        }
+        return (result);
     }
 
     
