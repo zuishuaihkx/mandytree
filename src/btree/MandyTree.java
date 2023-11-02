@@ -33,7 +33,6 @@ public class MandyTree implements BTree {
 
     private static abstract class Node {
         //fill in your implementation about Node in common here
-        Node parent;
         private Node() {}
 
         List<Integer> values = new ArrayList<>();
@@ -73,7 +72,7 @@ public class MandyTree implements BTree {
 
     }
     /**
-     *
+     * Search the aim leafNode
      */
     public Stack<Node> searchNode (Integer key) {
         Node pointer = root;
@@ -89,6 +88,7 @@ public class MandyTree implements BTree {
     /**
      * Insert key to tree
      * @param key
+     * using inertleaf, insertIndex method;
      */
     public void insert(Integer key) {
         if (root == null) {
@@ -101,8 +101,21 @@ public class MandyTree implements BTree {
             // insert into leaf node
             Node pointer = searchPath.pop();
             Node splitnode = insertLeaf(key,(LeafNode) pointer);
-            if (splitnode != null) {
-                insertIndex(splitnode, pointer, splitnode.values.get(0));
+            int popUpkey = splitnode.values.get(0);
+            while (splitnode != null) {
+                if (searchPath.empty()) { // no node in path means create node and take as root
+                    Node newRoot = new IndexNode();
+                    newRoot.values.add(popUpkey);
+                    ((IndexNode)newRoot).childeren.add(pointer);
+                    ((IndexNode)newRoot).childeren.add(splitnode);
+                    root = newRoot;
+                }
+                else {
+                    pointer = searchPath.pop();
+                    Map<String, Object> result = insertIndex(splitnode, pointer, popUpkey);
+                    splitnode = (IndexNode) result.get("splitNode");
+                    popUpkey = (int) result.get("popUpkey");
+                }
             }
         }
     }
@@ -110,47 +123,39 @@ public class MandyTree implements BTree {
     /**
      * insert key to index node
      */
-    public void insertIndex(Node newChild, Node initialChild,int key) {
-        if (newChild.parent == null) {
-            Node createParent = new IndexNode();
-            createParent.values.add(key);
-            ((IndexNode)createParent).childeren.add(initialChild);
-            ((IndexNode)createParent).childeren.add(newChild);
-            root = createParent;
+    public Map<String, Object> insertIndex(Node newChild, Node current,int key) {
+
+        Map<String, Object> result = new HashMap<>();
+        current.values.add(key);
+        ((IndexNode)current).childeren.add(newChild);
+        current.values.sort(Comparator.naturalOrder());
+        Collections.sort(((IndexNode)current).childeren, new childernComparator());
+        int popUpkey = -1;
+        Node splitNode = null;
+        if(current.values.size() > DEGREE*2) {
+            popUpkey = current.values.get(DEGREE);
+            splitNode = splitIndex(current);
+
         }
-        else {
-            IndexNode parent = (IndexNode) newChild.parent;
-            parent.values.add(key);
-            parent.childeren.add(newChild);
-            parent.values.sort(Comparator.naturalOrder());
-            Collections.sort(parent.childeren, new childernComparator());
-            if(parent.values.size() > DEGREE*2) {
-                Map<String, Object> storage = splitIndex(parent);
-                insertIndex((Node)storage.get("newNode"),parent, (int) storage.get("key"));
-            }
-        }
+        result.put("popUpkey", popUpkey);
+        result.put("splitNode", splitNode);
+        return result;
     }
 
-    public Map splitIndex (Node parent) {
-        Map<String, Object> storage = new HashMap<>();
+    public Node splitIndex (Node current) {
         Node newNode = new IndexNode();
         List<Integer> newList = newNode.values;
         List<Node> newListChil = ((IndexNode) newNode).childeren;
-        int key = parent.values.get(DEGREE);
-        parent.values.remove(DEGREE);
+        current.values.remove(DEGREE);
         for(int i=0; i < DEGREE+1 ;i++) {
             if (i<DEGREE) {
-                newList.add(parent.values.get(DEGREE));
-                parent.values.remove(DEGREE);
+                newList.add(current.values.get(DEGREE));
+                current.values.remove(DEGREE);
             }
-            newListChil.add(((IndexNode)parent).childeren.get(DEGREE));
-            ((IndexNode)parent).childeren.remove(DEGREE);
-            ((IndexNode)parent).childeren.get(DEGREE).parent = newNode;
+            newListChil.add(((IndexNode)current).childeren.get(DEGREE));
+            ((IndexNode)current).childeren.remove(DEGREE);
         }
-
-        storage.put("newNode", newNode);
-        storage.put("key", key);
-        return storage;
+        return newNode;
     }
 
     class childernComparator implements Comparator<Node> {
@@ -172,20 +177,16 @@ public class MandyTree implements BTree {
 
     }
 
-    private List<Integer> splitList(List<Integer> list) {
+    private Node splitLeaf (Node node) {
+
         List<Integer> newList = new ArrayList<>();
         for(int i=0; i < DEGREE+1 ;i++) {
-            newList.add(list.get(DEGREE));
-            list.remove(DEGREE);
+            newList.add(node.values.get(DEGREE));
+            node.values.remove(DEGREE);
         }
-        return newList;
-    }
-    private Node splitLeaf (Node node) {
-        List<Integer> splitlist = splitList(node.values);
-        Node splitnode = new LeafNode(splitlist);
+        Node splitnode = new LeafNode(newList);
         ((LeafNode)splitnode).next= ((LeafNode)node).next;
         ((LeafNode)node).next = (LeafNode) splitnode;
-        splitnode.parent = node.parent;
         return splitnode;
         //nodeRight.parent
     }
