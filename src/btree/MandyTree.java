@@ -1,4 +1,5 @@
 package btree;
+
 import java.util.*;
 
 import Utils.Clock;
@@ -33,25 +34,113 @@ public class MandyTree implements BTree {
 
     private static abstract class Node {
         //fill in your implementation about Node in common here
-        private Node() {}
+        private Node() {
+        }
 
-        List<Integer> values = new ArrayList<>();
-        public List<Integer> getIndex() {return values;}
+        private List<Integer> values = new ArrayList<>();
 
+        public List<Integer> getValues() {
+            return values;
+        }
+
+        public void addValue(int key) {
+            values.add(key);
+        }
+
+        public void addValue(List<Integer> values) {
+            this.values.addAll(values);
+        }
+
+        public void removeValue(int index) {
+            values.remove(index);
+        }
+
+        public void sortNode() {
+            values.sort(Comparator.naturalOrder());
+        }
+
+        public abstract void merge(int DEGREE);
+
+        public void changeValue(int key, int index) {
+            values.set(index,key);
+        }
 
     }
 
     //LeafNode
     private static class LeafNode extends Node {
         //fill in your implementation specific about LeafNode here
-        LeafNode next;
-        LeafNode previous;
-        private LeafNode () {
+        private LeafNode next;
+        private LeafNode previous;
+
+        private LeafNode() {
             super();
         }
 
-        private LeafNode (List<Integer> values) {
-            this.values.addAll(values);
+
+        public void setNext(LeafNode next) {
+            this.next = next;
+        }
+
+        public void setPrevious(LeafNode previous) {
+            this.previous = previous;
+        }
+
+        public LeafNode getNext() {
+            return next;
+        }
+
+        public LeafNode getPrevious() {
+            return previous;
+        }
+
+
+
+
+        public Node insertLeaf(Integer key, LeafNode pointer, int DEGREE) {
+            pointer.addValue(key);
+            pointer.sortNode(); // sort the leafnode first
+
+            if (pointer.getValues().size() <= DEGREE * 2) {
+                return null;
+            } else {
+                LeafNode splitnode = splitLeaf(pointer, DEGREE);
+                return splitnode;
+            }
+
+        }
+
+        public LeafNode splitLeaf(LeafNode node, int DEGREE) {
+
+            List<Integer> newList = new ArrayList<>();
+            for (int i = 0; i < DEGREE + 1; i++) {
+                newList.add(node.getValues().get(DEGREE));
+                node.removeValue(DEGREE);
+            }
+            LeafNode splitnode = new LeafNode();
+            splitnode.addValue(newList);
+            splitnode.setNext(node.getNext());
+            node.setNext(splitnode);
+            splitnode.setPrevious(splitnode);
+            node.getNext().setPrevious(splitnode);
+            return splitnode;
+            //nodeRight.parent
+        }
+
+        @Override
+        public void merge(int DEGREE, IndexNode parent) {
+            if (this == parent.getChildren().get(0)) {
+                this.addValue(this.getNext().getValues());
+                if (this.getNext().getValues().size() > DEGREE*2) {
+                    LeafNode splitNode = splitLeaf(this, DEGREE);
+                    parent.changeChildren(splitNode,1);
+                    parent.changeValue(splitNode.getValues().get(0),0);
+                }
+                else {
+                    parent
+                }
+
+            }
         }
 
     }
@@ -60,46 +149,109 @@ public class MandyTree implements BTree {
     private static class IndexNode extends Node {
         //fill in your implementation specific about IndexNode here
 
-        List<Node> childeren = new ArrayList<>();
-        private IndexNode () {
+        private List<Node> children = new ArrayList<>();
+
+        private IndexNode() {
             super();
         }
 
-        private IndexNode (List<Integer> index, List<Node> childeren) {
-            this.values.addAll(index);
-            this.childeren.addAll(childeren);
+        private IndexNode(List<Node> children) {
+            this.children.addAll(children);
+        }
+
+        public List<Node> getChildren() {
+            return children;
+        }
+
+        public void addChildren(Node node) {
+            children.add(node);
+        }
+
+        public void removeChildren(int index) {
+            children.remove(index);
+        }
+
+        /**
+         * insert key to index node
+         */
+        public Map<String, Object> insertIndex(Node newChild, IndexNode current, int key, int DEGREE) {
+
+            Map<String, Object> result = new HashMap<>();
+            current.addValue(key);
+            current.addChildren(newChild);
+            current.sortNode();
+            Collections.sort(current.children, new childernComparator());
+            int popUpkey = -1;
+            Node splitNode = null;
+            if (current.getValues().size() > DEGREE * 2) {
+                popUpkey = current.getValues().get(DEGREE);
+                splitNode = splitIndex(current, DEGREE);
+
+            }
+            result.put("popUpkey", popUpkey);
+            result.put("splitNode", splitNode);
+            return result;
+        }
+
+        public Node splitIndex(IndexNode current, int DEGREE) {
+            IndexNode newNode = new IndexNode();
+            List<Integer> newList = newNode.getValues();
+            List<Node> newListChil = newNode.getChildren();
+            current.removeValue(DEGREE);
+            for (int i = 0; i < DEGREE + 1; i++) {
+                if (i < DEGREE) {
+                    newList.add(current.getValues().get(DEGREE));
+                    current.removeValue(DEGREE);
+                }
+                newListChil.add(current.getChildren().get(DEGREE));
+                current.removeChildren(DEGREE);
+            }
+            return newNode;
+        }
+
+        public void changeChildren(Node node, int index) {
+            children.set(index, node);
+        }
+
+
+        class childernComparator implements Comparator<Node> {
+            @Override
+            public int compare(Node p1, Node p2) {
+                return p1.values.get(0) - p2.values.get(0);
+            }
         }
 
     }
+
     /**
      * Search the aim leafNode
      */
-    public Stack<Node> searchNode (Integer key) {
+    public Stack<Node> searchNode(Integer key) {
         Node pointer = root;
         Stack<Node> searchPath = new Stack<>();
         while (pointer instanceof IndexNode) {
-            int pos = btreeUtil.binarySearch(pointer.getIndex(), key);
+            int pos = btreeUtil.binarySearchChildren(pointer.getValues(), key);
             searchPath.add(pointer);
-//            if(pos >= ((IndexNode) pointer).childeren.size()) {
+//            if(pos >= ((IndexNode) pointer).children.size()) {
 //                return searchPath;
 //            }
-            pointer = ((IndexNode) pointer).childeren.get(pos);
+            pointer = ((IndexNode) pointer).getChildren().get(pos);
         }
         searchPath.add(pointer);
         return searchPath;
     }
+
     /**
      * Insert key to tree
-     * @param key
-     * using inertleaf, insertIndex method;
+     *
+     * @param key using inertleaf, insertIndex method;
      */
     public void insert(Integer key) {
         if (root == null) {
             Node first = new LeafNode();
             first.values.add(key);
             root = first;
-        }
-        else {
+        } else {
             Stack<Node> searchPath = searchNode(key);
 
             // insert into leaf node
@@ -107,22 +259,21 @@ public class MandyTree implements BTree {
 //            if (pointer instanceof IndexNode) {
 //                Node newNode = new LeafNode();
 //                newNode.values.add(key);
-//                ((IndexNode) pointer).childeren.add(newNode);
+//                ((IndexNode) pointer).children.add(newNode);
 //                return;
 //            }
-            Node splitnode = insertLeaf(key,(LeafNode) pointer);
-            int popUpkey = splitnode.values.get(0);
+            Node splitnode = ((LeafNode) pointer).insertLeaf(key, (LeafNode) pointer, DEGREE);
+            int popUpkey = splitnode.getValues().get(0);
             while (splitnode != null) {
                 if (searchPath.empty()) { // no node in path means create node and take as root
-                    Node newRoot = new IndexNode();
-                    newRoot.values.add(popUpkey);
-                    ((IndexNode)newRoot).childeren.add(pointer);
-                    ((IndexNode)newRoot).childeren.add(splitnode);
+                    IndexNode newRoot = new IndexNode();
+                    newRoot.addValue(popUpkey);
+                    newRoot.addChildren(pointer);
+                    newRoot.addChildren(splitnode);
                     root = newRoot;
-                }
-                else {
+                } else {
                     pointer = searchPath.pop();
-                    Map<String, Object> result = insertIndex(splitnode, pointer, popUpkey);
+                    Map<String, Object> result = ((IndexNode) pointer).insertIndex(splitnode, (IndexNode) pointer, popUpkey, DEGREE);
                     splitnode = (IndexNode) result.get("splitNode");
                     popUpkey = (int) result.get("popUpkey");
                 }
@@ -131,112 +282,69 @@ public class MandyTree implements BTree {
     }
 
     /**
-     * insert key to index node
-     */
-    public Map<String, Object> insertIndex(Node newChild, Node current,int key) {
-
-        Map<String, Object> result = new HashMap<>();
-        current.values.add(key);
-        ((IndexNode)current).childeren.add(newChild);
-        current.values.sort(Comparator.naturalOrder());
-        Collections.sort(((IndexNode)current).childeren, new childernComparator());
-        int popUpkey = -1;
-        Node splitNode = null;
-        if(current.values.size() > DEGREE*2) {
-            popUpkey = current.values.get(DEGREE);
-            splitNode = splitIndex(current);
-
-        }
-        result.put("popUpkey", popUpkey);
-        result.put("splitNode", splitNode);
-        return result;
-    }
-
-    public Node splitIndex (Node current) {
-        Node newNode = new IndexNode();
-        List<Integer> newList = newNode.values;
-        List<Node> newListChil = ((IndexNode) newNode).childeren;
-        current.values.remove(DEGREE);
-        for(int i=0; i < DEGREE+1 ;i++) {
-            if (i<DEGREE) {
-                newList.add(current.values.get(DEGREE));
-                current.values.remove(DEGREE);
-            }
-            newListChil.add(((IndexNode)current).childeren.get(DEGREE));
-            ((IndexNode)current).childeren.remove(DEGREE);
-        }
-        return newNode;
-    }
-
-    class childernComparator implements Comparator<Node> {
-        @Override
-        public int compare(Node p1, Node p2) {
-            return p1.values.get(0) - p2.values.get(0);
-        }
-    }
-
-    /**
-     * insert key to leaf node
-     */
-    public Node insertLeaf(Integer key, LeafNode pointer) {
-        pointer.values.add(key);
-        pointer.values.sort(Comparator.naturalOrder()); // sort the leafnode first
-
-        if(pointer.values.size() <= DEGREE*2) {return null;}
-        else {Node splitnode = splitLeaf(pointer); return splitnode;}
-
-    }
-
-    private Node splitLeaf (Node node) {
-
-        List<Integer> newList = new ArrayList<>();
-        for(int i=0; i < DEGREE+1 ;i++) {
-            newList.add(node.values.get(DEGREE));
-            node.values.remove(DEGREE);
-        }
-        Node splitnode = new LeafNode(newList);
-        ((LeafNode)splitnode).next= ((LeafNode)node).next;
-        ((LeafNode)node).next = (LeafNode) splitnode;
-        return splitnode;
-        //nodeRight.parent
-    }
-
-    /**
      * Delete a key from the tree starting from root
+     *
      * @param key key to be deleted
      */
     public void delete(Integer key) {
+        Node current = root;
+        Stack<Node> searchPath = searchNode(key);
+        // judge whether this key exit;
+        LeafNode leafNode = (LeafNode) searchPath.pop();
+        int pos = btreeUtil.binarySearch(leafNode.getValues(), key);
+        if (pos < 0) {
+            System.out.println("not this key");
+        }
+        else {
+            leafNode.removeValue(pos);
+            int minnumber = (int) (DEGREE*2*MIN_FILL_FACTOR);
+            if (leafNode.getValues().size() < minnumber && !searchPath.empty()) {
+                leafNode.
+            }
+        }
     }
 
     /**
      * Search tree by range
+     *
      * @param key1 First key
      * @param key2 Second key
      * @return List of keys
      */
     public List<Integer> search(Integer key1, Integer key2) {
         Node pointer = root;
-        List<Integer> leafNode;
+        List<Integer> leafNodeValues;
         List<Integer> result = new ArrayList<>();
         while (pointer instanceof IndexNode) {
-            int pos = btreeUtil.binarySearch(pointer.getIndex(), key1);
-            pointer = ((IndexNode) pointer).childeren.get(pos);
+            int pos = btreeUtil.binarySearchChildren(pointer.getValues(), key1);
+            pointer = ((IndexNode) pointer).getChildren().get(pos);
         }
-        leafNode = pointer.values;
-        if (leafNode.get(leafNode.size()-1) < key1) {return null;}
-        else {
-            int pos = btreeUtil.binarySearch(leafNode, key1)-1;
-            if (leafNode.get(pos) != key1) {pos++;}
+        leafNodeValues = pointer.getValues();
+        if (leafNodeValues.get(leafNodeValues.size() - 1) < key1) {
+            return null;
+        } else {
+            int pos = btreeUtil.binarySearchChildren(leafNodeValues, key1) - 1;
+            if (leafNodeValues.get(pos) != key1) {
+                pos++;
+            }
 
-            while (leafNode.get(pos) <= key2) {
-                if (pos <= leafNode.size()) {result.add(leafNode.get(pos));pos++;}
-                else {pos=0; leafNode = ((LeafNode) pointer).next.values;}
+            while (leafNodeValues.get(pos) <= key2) {
+
+                result.add(leafNodeValues.get(pos));
+                pos++;
+                if (pos == leafNodeValues.size()) {
+                    pos = 0;
+                    if (((LeafNode) pointer).getNext() == null) {
+                        break;
+                    }
+                    leafNodeValues = ((LeafNode) pointer).getNext().getValues();
+                }
             }
         }
         return (result);
     }
 
-    
+
     /**
      * Print statistics of the current tree
      */
@@ -250,6 +358,7 @@ public class MandyTree implements BTree {
         System.out.println("%");
         System.out.println("Height of tree: ");
     }
+
     /**
      * Print tree from root
      */
@@ -257,14 +366,14 @@ public class MandyTree implements BTree {
         Node pointer = root;
         if (pointer instanceof LeafNode) {
             System.out.println(pointer.values);
-        }
-        else {
+        } else {
 
         }
     }
 
     /**
      * print tree from node
+     *
      * @param n starting node to print
      */
     public void printTree(Node n) {
@@ -277,7 +386,7 @@ public class MandyTree implements BTree {
         //Fill in you work here
 
     }
-    
+
     public static void main(String[] args) {
         //we hardcode the fill factor and degree for this project
         BTree mandyTree = new MandyTree(0.5, 4);
