@@ -51,6 +51,14 @@ public class MandyTree implements BTree {
             this.values.addAll(values);
         }
 
+        public void addValue(int index, List<Integer> values) {
+            this.values.addAll(index, values);
+        }
+
+        public void addValue(int index, int value) {
+            this.values.add(index,value);
+        }
+
         public void removeValue(int index) {
             values.remove(index);
         }
@@ -59,7 +67,6 @@ public class MandyTree implements BTree {
             values.sort(Comparator.naturalOrder());
         }
 
-        //public abstract void merge(int DEGREE);
 
         public void changeValue(int key, int index) {
             values.set(index,key);
@@ -128,21 +135,57 @@ public class MandyTree implements BTree {
             //nodeRight.parent
         }
 
-        //@Override
-//        public void merge(int DEGREE, IndexNode parent) {
-//            if (this == parent.getChildren().get(0)) {
-//                this.addValue(this.getNext().getValues());
-//                if (this.getNext().getValues().size() > DEGREE*2) {
-//                    LeafNode splitNode = splitLeaf(this, DEGREE);
-//                    parent.changeChildren(splitNode,1);
-//                    parent.changeValue(splitNode.getValues().get(0),0);
-//                }
-//                else {
-//                    parent
-//                }
-//
-//            }
-//        }
+
+        public void deleteLeafNode(int DEGREE, IndexNode parent) {
+            LeafNode borrower;
+            // find sibling node to borrow node
+            if (parent.getChildren().contains(this.previous) && parent.getChildren().contains(this.next)) {
+                if (this.previous.getValues().size() >= this.next.getValues().size()) {
+                    borrower = this.previous;
+                }
+                else{borrower = this.next;}
+            }
+            else if (parent.getChildren().contains(this.previous)) {borrower = this.previous;}
+            else {borrower = this.next;}
+            // borrow one data from sibling node
+            if (borrower.getValues().size() > DEGREE) {
+                if (borrower == this.next) {
+                    int oldindex = borrower.getValues().get(0);
+                    this.addValue(borrower.getValues().get(0));
+                    borrower.removeValue(0);
+                    int pos = btreeUtil.binarySearchIndex(parent.getValues(),oldindex);
+                    parent.changeValue(borrower.getValues().get(0), pos);
+                }
+                else {
+                    int oldindex = this.getValues().get(0);
+                    this.addValue(0, borrower.getValues().get(borrower.getValues().size()-1));
+                    borrower.removeValue(borrower.getValues().size()-1);
+                    int pos = btreeUtil.binarySearchIndex(parent.getValues(),oldindex);
+                    parent.changeValue(this.getValues().get(0), pos);
+                }
+            } // sibling also not enough merge
+            else {
+                if (borrower == this.next) {
+                    int oldindex = borrower.getValues().get(0);
+                    borrower.addValue(0, this.getValues());
+                    borrower.setPrevious(this.previous);
+                    this.previous.setNext(borrower);
+                    int pos = btreeUtil.binarySearchIndex(parent.getValues(), oldindex);
+                    parent.removeValue(pos);
+                    parent.removeChildren(pos);
+                }
+                else {
+                    int oldindex = this.getValues().get(0);
+                    borrower.addValue(this.getValues());
+                    borrower.setNext(this.next);
+                    this.next.setPrevious(borrower);
+                    int pos = btreeUtil.binarySearchIndex(parent.getValues(), oldindex);
+                    parent.removeValue(pos);
+                    parent.removeChildren(pos+1);
+                }
+            }
+
+        }
 
     }
 
@@ -224,6 +267,75 @@ public class MandyTree implements BTree {
             }
         }
 
+        public void deleteIndexNode(int DEGREE, IndexNode parent) {
+            IndexNode siblingNode;
+            int leftOrRight;
+            int pos = parent.getChildren().lastIndexOf(this);
+            if(pos == 0) {siblingNode = (IndexNode) parent.getChildren().get(1);leftOrRight = 1;}
+            else if(pos == parent.getChildren().size()-1) {siblingNode = (IndexNode) parent.getChildren().get(pos-1); leftOrRight = 0;}
+            else {
+                if (parent.getChildren().get(pos-1).getValues().size() >= parent.getChildren().get(pos+1).getValues().size()){
+                    siblingNode = (IndexNode) parent.getChildren().get(pos-1);
+                    leftOrRight = 0;
+                }
+                else {siblingNode = (IndexNode) parent.getChildren().get(pos+1); leftOrRight = 1;}
+            }
+
+            // if sibling number > GEGREE
+            if (siblingNode.getValues().size() > DEGREE) {
+                if (leftOrRight == 0) {
+                    int oldindex = this.getValues().get(0);
+                    pos = btreeUtil.binarySearchIndex(parent.getValues(),oldindex);
+                    this.addValue(0, parent.getValues().get(pos));
+                    parent.changeValue(siblingNode.getValues().get(siblingNode.getValues().size()-1), pos);
+                    siblingNode.removeValue(siblingNode.getValues().size()-1);
+                    this.addChildren(0, siblingNode.getChildren().get(siblingNode.getChildren().size()-1));
+                    siblingNode.removeValue(siblingNode.getChildren().size()-1);
+                }
+                else {
+                    int oldindex = siblingNode.getValues().get(0);
+                    pos = btreeUtil.binarySearchIndex(parent.getValues(),oldindex);
+                    this.addValue(parent.getValues().get(pos));
+                    parent.changeValue(siblingNode.getValues().get(0), pos);
+                    siblingNode.removeValue(0);
+                    this.addChildren( siblingNode.getChildren().get(0));
+                    siblingNode.removeValue(0);
+                }
+            }
+            else { // sibling not enough
+                if (leftOrRight == 0) {
+                    int oldindex = this.getValues().get(0);
+                    pos = btreeUtil.binarySearchIndex(parent.getValues(), oldindex);
+                    siblingNode.addValue(parent.getValues().get(pos));
+                    siblingNode.addValue(this.getValues());
+                    siblingNode.addChildren(this.children);
+                    parent.removeChildren(pos+1);
+                    parent.removeValue(pos);
+                }
+                else {
+                    int oldindex = siblingNode.getValues().get(0);
+                    pos = btreeUtil.binarySearchIndex(parent.getValues(), oldindex);
+                    siblingNode.addValue(0, parent.getValues().get(pos));
+                    siblingNode.addValue(0,this.getValues());
+                    siblingNode.addChildren(0,this.children);
+                    parent.removeChildren(pos);
+                    parent.removeValue(pos);
+                }
+            }
+        }
+
+        public void addChildren(int index, List<Node> list) {
+            children.addAll(index, list);
+        }
+
+        public void addChildren(List<Node> list) {
+            children.addAll(list);
+        }
+
+        public void addChildren(int index, Node node) {
+            children.add(index, node);
+        }
+
     }
 
     /**
@@ -269,7 +381,7 @@ public class MandyTree implements BTree {
             if (splitnode != null){
                 int popUpkey = splitnode.getValues().get(0);
                 while (splitnode != null) {
-                    if (searchPath.empty() ) { // no node in path means create node and take as root
+                    if (searchPath.isEmpty() ) { // no node in path means create node and take as root
                         IndexNode newRoot = new IndexNode();
                         newRoot.addValue(popUpkey);
                         newRoot.addChildren(pointer);
@@ -294,7 +406,6 @@ public class MandyTree implements BTree {
      * @param key key to be deleted
      */
     public void delete(Integer key) {
-        Node current = root;
         Stack<Node> searchPath = searchNode(key);
         // judge whether this key exit;
         LeafNode leafNode = (LeafNode) searchPath.pop();
@@ -305,9 +416,20 @@ public class MandyTree implements BTree {
         else {
             leafNode.removeValue(pos);
             int minnumber = (int) (DEGREE*2*MIN_FILL_FACTOR);
-            if (leafNode.getValues().size() < minnumber && !searchPath.empty()) {
-                //leafNode.
+            if (leafNode.getValues().size() < minnumber && !searchPath.isEmpty()) {
+                leafNode.deleteLeafNode(DEGREE, (IndexNode) searchPath.peek());
             }
+            else {leafNode.removeValue(pos);}
+
+            // deal with index node
+            while (!searchPath.isEmpty()) {
+                IndexNode current = (IndexNode) searchPath.pop();
+                if (current.getValues().size() < minnumber && !searchPath.isEmpty()) {
+                    current.deleteIndexNode(DEGREE, (IndexNode) searchPath.peek());
+                }
+                if (root.getValues().isEmpty()) {root = current;}
+            }
+
         }
     }
 
