@@ -160,6 +160,7 @@ public class CLI {
         bTree.dumpStatistics();
     }
 
+
     private static void updateTestCommand(String[] tokens, BTree bTree) {
         if (tokens.length != 2) {
             System.out.println("Invalid number of arguments.");

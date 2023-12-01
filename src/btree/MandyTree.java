@@ -18,6 +18,8 @@ public class MandyTree implements BTree {
     private int DEGREE = 4;
     private Node root = null;
 
+    private double averageFillFactor;
+
     //some internal statistics for debugging
     private int totalNode = 0;
     private int height = 0;
@@ -126,8 +128,10 @@ public class MandyTree implements BTree {
             }
             LeafNode splitnode = new LeafNode();
             splitnode.addValue(newList);
-            node.getNext().setPrevious(splitnode);
-            splitnode.setNext(node.getNext());
+            if(node.getNext() != null) {
+                node.getNext().setPrevious(splitnode);
+                splitnode.setNext(node.getNext());
+            }
             node.setNext(splitnode);
             splitnode.setPrevious(splitnode);
             return splitnode;
@@ -169,8 +173,10 @@ public class MandyTree implements BTree {
                 if (borrower == this.next) {
                     int oldindex = borrower.getValues().get(0);
                     borrower.addValue(0, this.getValues());
-                    borrower.setPrevious(this.previous);
-                    this.previous.setNext(borrower);
+                    if (this.previous != null) {
+                        borrower.setPrevious(this.previous);
+                        this.previous.setNext(borrower);
+                    }
                     int pos = btreeUtil.binarySearchIndex(parent.getValues(), oldindex);
                     parent.removeValue(pos);
                     parent.removeChildren(pos);
@@ -178,8 +184,10 @@ public class MandyTree implements BTree {
                 else {
                     int oldindex = this.getValues().get(0);
                     borrower.addValue(this.getValues());
-                    borrower.setNext(this.next);
-                    this.next.setPrevious(borrower);
+                    if (borrower.next != null) {
+                        borrower.setNext(this.next);
+                        this.next.setPrevious(borrower);
+                    }
                     int pos = btreeUtil.binarySearchIndex(parent.getValues(), oldindex);
                     parent.removeValue(pos);
                     parent.removeChildren(pos+1);
@@ -367,37 +375,31 @@ public class MandyTree implements BTree {
      * @param key using inertleaf, insertIndex method;
      */
     public void insert(Integer key) {
-        dataEntries++;
+        //dataEntries++;
         if (root == null) {
             Node first = new LeafNode();
             first.values.add(key);
-            indexEntries++;
+            //indexEntries++;
             root = first;
-            totalNode++;
-            height++;
+            //totalNode++;
+            //height++;
         } else {
             Stack<Node> searchPath = searchNode(key);
             // insert into leaf node
             Node pointer = searchPath.pop();
-//            if (pointer instanceof IndexNode) {
-//                Node newNode = new LeafNode();
-//                newNode.values.add(key);
-//                ((IndexNode) pointer).children.add(newNode);
-//                return;
-//            }
             Node splitnode = ((LeafNode) pointer).insertLeaf(key, (LeafNode) pointer, DEGREE);
             if (splitnode != null){
                 int popUpkey = splitnode.getValues().get(0);
                 do{
-                    totalNode++;
-                    indexEntries++;
+                    //totalNode++;
+                    //indexEntries++;
                     if (searchPath.isEmpty() ) { // no node in path means create node and take as root
                         IndexNode newRoot = new IndexNode();
                         newRoot.addValue(popUpkey);
                         newRoot.addChildren(pointer);
                         newRoot.addChildren(splitnode);
                         root = newRoot;
-                        height++;
+                        //height++;
                         splitnode = null;
                     } else {
                         pointer = searchPath.pop();
@@ -426,12 +428,12 @@ public class MandyTree implements BTree {
             System.out.println("not this key");
         }
         else {
-            dataEntries--;
+            //dataEntries--;
             leafNode.removeValue(pos);
             int minnumber = (int) (DEGREE*2*MIN_FILL_FACTOR);
             if (leafNode.getValues().size() < minnumber && !searchPath.isEmpty()) {
                 deleteNode = leafNode.deleteLeafNode(DEGREE, (IndexNode) searchPath.peek());
-                if (deleteNode) {totalNode--; }
+                if (deleteNode) {}//totalNode--; }
             }
             else {return;}
 
@@ -440,10 +442,10 @@ public class MandyTree implements BTree {
                 IndexNode current = (IndexNode) searchPath.pop();
                 if (current.getValues().size() < minnumber && !searchPath.isEmpty()) {
                     deleteNode = current.deleteIndexNode(DEGREE, (IndexNode) searchPath.peek());
-                    if (deleteNode) {totalNode--; indexEntries--;}
+                    if (deleteNode) {}//totalNode--; indexEntries--;}
                 }
                 else {break;}
-                if (root.getValues().isEmpty()) {root = current; totalNode--; height--; break;}
+                if (root.getValues().isEmpty()) {root = current; break;}//totalNode--; height--; break;}
             }
 
         }
@@ -500,7 +502,7 @@ public class MandyTree implements BTree {
         System.out.println("Total number of nodes: " + totalNode);
         System.out.println("Total number of data entries: " + dataEntries);
         System.out.println("Total number of index entries: " + indexEntries);
-        System.out.print("Average fill factor: ");
+        System.out.print("Average fill factor: " + averageFillFactor);
         System.out.println("%");
         System.out.println("Height of tree: " + height);
     }
