@@ -498,54 +498,139 @@ public class MandyTree implements BTree {
      */
     @Override
     public void dumpStatistics() {
-        System.out.println("Statistics of the B+ Tree:");
+        updateAverageFillFactor();
+
+        // 打印统计数据
+        System.out.println("Statistics of the MandyTree:");
         System.out.println("Total number of nodes: " + totalNode);
+        System.out.println("Height of tree: " + height);
         System.out.println("Total number of data entries: " + dataEntries);
         System.out.println("Total number of index entries: " + indexEntries);
-        System.out.print("Average fill factor: " + averageFillFactor);
-        System.out.println("%");
-        System.out.println("Height of tree: " + height);
+        System.out.printf("Average fill factor: %.2f%%\n", averageFillFactor);
+    }
+
+    private void updateAverageFillFactor() {
+        // 计算平均填充因子的逻辑
+        // 注意：这需要具体的实现细节，例如，可能需要遍历树来计算实际的填充情况
+        // 下面的代码是一个示例性的伪代码
+        int totalValues = 0;
+        int totalCapacity = 0;
+
+        Queue<Node> queue = new LinkedList<>();
+        if (root != null) {
+            queue.add(root);
+        }
+
+        while (!queue.isEmpty()) {
+            Node node = queue.poll();
+            totalValues += node.getValues().size();
+            totalCapacity += DEGREE * 2; // 假设每个节点的最大容量是 DEGREE * 2
+
+            if (node instanceof IndexNode) {
+                IndexNode indexNode = (IndexNode) node;
+                queue.addAll(indexNode.getChildren());
+            }
+        }
+
+        averageFillFactor = totalCapacity == 0 ? 0 : (double) totalValues / totalCapacity * 100;
+    }
+
+    public void printTree() {
+        if (root == null) {
+            System.out.println("The tree is empty.");
+            return;
+        }
+
+        Queue<Node> queue = new LinkedList<>();
+        queue.add(root);
+        int level = 0;
+        int maxLevel = getHeight(root);
+
+        while (!queue.isEmpty()) {
+            int levelSize = queue.size(); // Number of elements at the current level
+            System.out.print("Level " + level + ": ");
+
+            while (levelSize > 0) {
+                Node current = queue.poll();
+                printNode(current, level, maxLevel);
+                levelSize--;
+
+                // 如果是IndexNode，将子节点加入队列
+                if (current instanceof IndexNode) {
+                    IndexNode indexNode = (IndexNode) current;
+                    queue.addAll(indexNode.getChildren());
+                }
+            }
+            System.out.println(); // 换行，表示新的层级开始
+            level++;
+        }
+    }
+
+    private void printNode(Node node, int level, int maxLevel) {
+        int leadingSpaces = (int) Math.pow(2, maxLevel - level + 1);
+        for (int i = 0; i < leadingSpaces; i++) {
+            System.out.print(" ");
+        }
+        System.out.print(node.getValues());
+        for (int i = 0; i < leadingSpaces; i++) {
+            System.out.print(" ");
+        }
+    }
+
+    private int getHeight(Node root) {
+        if (root == null) {
+            return 0;
+        }
+        if (root instanceof LeafNode) {
+            return 1;
+        }
+        int maxHeight = 0;
+        IndexNode indexNode = (IndexNode) root;
+        for (Node child : indexNode.getChildren()) {
+            maxHeight = Math.max(maxHeight, getHeight(child));
+        }
+        return 1 + maxHeight;
     }
 
     /**
      * Print tree from root
      */
-    public void printTree() {
-        if(root == null) {
-            System.out.println("The tree is empty");
-        }
-        else {
-            printTree(root);
-        }
-    }
-
-
-    /**
-     * print tree from node
-     *
-     * @param n starting node to print
-     */
-    public void printTree(Node n) {
-        if (n == null) {
-            System.out.println("The node is null.");
-        } else {
-            printSubtree(n, 0);
-        }
-    }
-
-    private void printSubtree(Node node, int indentation) {
-        for (int i = 0; i < indentation; i++) {
-            System.out.print("\t");
-        }
-        System.out.println(node.values);
-
-        if (node instanceof IndexNode) {
-            IndexNode indexNode = (IndexNode) node;
-            for (Node child : indexNode.getChildren()) {
-                printSubtree(child, indentation + 1);
-            }
-        }
-    }
+//    public void printTree() {
+//        if(root == null) {
+//            System.out.println("The tree is empty");
+//        }
+//        else {
+//            printTree(root);
+//        }
+//    }
+//
+//
+//    /**
+//     * print tree from node
+//     *
+//     * @param n starting node to print
+//     */
+//    public void printTree(Node n) {
+//        if (n == null) {
+//            System.out.println("The node is null.");
+//        } else {
+//            printSubtree(n, 0);
+//        }
+//    }
+//
+//    private void printSubtree(Node node, int indentation) {
+//        for (int i = 0; i < indentation; i++) {
+//            System.out.print("\t");
+//        }
+//        System.out.println(node.values);
+//
+//        if (node instanceof IndexNode) {
+//            IndexNode indexNode = (IndexNode) node;
+//            for (Node child : indexNode.getChildren()) {
+//                printSubtree(child, indentation + 1);
+//            }
+//        }
+//    }
 
 
     @Override
