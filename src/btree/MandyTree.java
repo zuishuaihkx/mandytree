@@ -26,6 +26,8 @@ public class MandyTree implements BTree {
     private int dataEntries = 0;
     private int indexEntries = 0;
 
+    private Node lastInsert;
+
     //my constructor
     public MandyTree(double MIN_FILL_FACTOR, int DEGREE) {
         root = null;
@@ -375,14 +377,17 @@ public class MandyTree implements BTree {
      * @param key using inertleaf, insertIndex method;
      */
     public void insert(Integer key) {
-        //dataEntries++;
+        dataEntries++;
         if (root == null) {
             Node first = new LeafNode();
             first.values.add(key);
-            //indexEntries++;
+            indexEntries++;
             root = first;
-            //totalNode++;
-            //height++;
+            totalNode++;
+            height++;
+        }
+        else if () {
+
         } else {
             Stack<Node> searchPath = searchNode(key);
             // insert into leaf node
@@ -391,15 +396,15 @@ public class MandyTree implements BTree {
             if (splitnode != null){
                 int popUpkey = splitnode.getValues().get(0);
                 do{
-                    //totalNode++;
-                    //indexEntries++;
+                    totalNode++;
+                    indexEntries++;
                     if (searchPath.isEmpty() ) { // no node in path means create node and take as root
                         IndexNode newRoot = new IndexNode();
                         newRoot.addValue(popUpkey);
                         newRoot.addChildren(pointer);
                         newRoot.addChildren(splitnode);
                         root = newRoot;
-                        //height++;
+                        height++;
                         splitnode = null;
                     } else {
                         pointer = searchPath.pop();
@@ -428,12 +433,12 @@ public class MandyTree implements BTree {
             System.out.println("not this key");
         }
         else {
-            //dataEntries--;
+            dataEntries--;
             leafNode.removeValue(pos);
             int minnumber = (int) (DEGREE*2*MIN_FILL_FACTOR);
             if (leafNode.getValues().size() < minnumber && !searchPath.isEmpty()) {
                 deleteNode = leafNode.deleteLeafNode(DEGREE, (IndexNode) searchPath.peek());
-                if (deleteNode) {}//totalNode--; }
+                if (deleteNode) {totalNode--; }
             }
             else {return;}
 
@@ -442,10 +447,10 @@ public class MandyTree implements BTree {
                 IndexNode current = (IndexNode) searchPath.pop();
                 if (current.getValues().size() < minnumber && !searchPath.isEmpty()) {
                     deleteNode = current.deleteIndexNode(DEGREE, (IndexNode) searchPath.peek());
-                    if (deleteNode) {}//totalNode--; indexEntries--;}
+                    if (deleteNode) {totalNode--; indexEntries--;}
                 }
                 else {break;}
-                if (root.getValues().isEmpty()) {root = current; break;}//totalNode--; height--; break;}
+                if (root.getValues().isEmpty()) {root = current; totalNode--; height--; break;}
             }
 
         }
@@ -510,9 +515,7 @@ public class MandyTree implements BTree {
     }
 
     private void updateAverageFillFactor() {
-        // 计算平均填充因子的逻辑
-        // 注意：这需要具体的实现细节，例如，可能需要遍历树来计算实际的填充情况
-        // 下面的代码是一个示例性的伪代码
+
         int totalValues = 0;
         int totalCapacity = 0;
 
