@@ -234,6 +234,6 @@ public class CLI {
 
     }
 
-    private static boolean gradingMode = false;
+    private static boolean gradingMode = true;
     
 }
