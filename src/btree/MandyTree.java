@@ -28,6 +28,7 @@ public class MandyTree implements BTree {
     private int indexEntries = 0;
 
     private Stack<Node> lastInsertPath;
+    private Integer lastInsertKey = -1;
 
     //my constructor
     public MandyTree(double MIN_FILL_FACTOR, int DEGREE) {
@@ -112,7 +113,14 @@ public class MandyTree implements BTree {
 
 
         //@Override
-       // public void merge()
+
+        /**
+         * insert new value into leaf node
+         * @param key insert value
+         * @param pointer insert node
+         * @param DEGREE
+         * @return return splitnode(new node)
+         */
 
         public Node insertLeaf(Integer key, LeafNode pointer, int DEGREE) {
             pointer.addValue(key);
@@ -126,6 +134,13 @@ public class MandyTree implements BTree {
             }
 
         }
+
+        /**
+         * if the node value > 2*degree split this leaf node
+         * @param node: the node need to split
+         * @param DEGREE
+         * @return split node
+         */
 
         public LeafNode splitLeaf(LeafNode node, int DEGREE) {
 
@@ -146,8 +161,17 @@ public class MandyTree implements BTree {
             //nodeRight.parent
         }
 
-
+        /**
+         * delete value at leaf node
+         * include two condition
+         *  1: sibling have enough value, borrow from sibling
+         *  2: sibling not enough value, merge
+         * @param DEGREE
+         * @param parent: current operation node parent
+         * @return: if have merge node, return merge node, else return null
+         */
         public Node deleteLeafNode(int DEGREE, IndexNode parent) {
+            // find the borrower, the node previous or next
             LeafNode borrower;
             Node mergeNode = null;
             // find sibling node to borrow node
@@ -234,7 +258,12 @@ public class MandyTree implements BTree {
         }
 
         /**
-         * insert key to index node
+         * insert value to index node
+         * @param newChild: new split node of below
+         * @param current: current index node
+         * @param key: insert value
+         * @param DEGREE
+         * @return: new value that above node need to add and new create node(split node)
          */
         public Map<String, Object> insertIndex(Node newChild, IndexNode current, int key, int DEGREE) {
 
@@ -255,6 +284,12 @@ public class MandyTree implements BTree {
             return result;
         }
 
+        /**
+         * if current node value > 2*degree split node
+         * @param current: current split node
+         * @param DEGREE
+         * @return new split node
+         */
         public Node splitIndex(IndexNode current, int DEGREE) {
             IndexNode newNode = new IndexNode();
             List<Integer> newList = newNode.getValues();
@@ -277,7 +312,6 @@ public class MandyTree implements BTree {
             children.set(index, node);
         }
 
-
         class childernComparator implements Comparator<Node> {
             @Override
             public int compare(Node p1, Node p2) {
@@ -285,10 +319,20 @@ public class MandyTree implements BTree {
             }
         }
 
+        /**
+         * delete value in index node
+         *  include two condition
+         *    1: sibling have enough value, borrow from sibling, and parent
+         *    2: sibling not enough value, merge sibling and parent.
+         * @param DEGREE
+         * @param parent
+         * @return
+         */
         public Node deleteIndexNode(int DEGREE, IndexNode parent) {
             IndexNode siblingNode;
             Node mergeNode = null;
             int leftOrRight;
+            // find out the borrower
             int pos = parent.getChildren().lastIndexOf(this);
             if(pos == 0) {siblingNode = (IndexNode) parent.getChildren().get(1);leftOrRight = 1;}
             else if(pos == parent.getChildren().size()-1) {siblingNode = (IndexNode) parent.getChildren().get(pos-1); leftOrRight = 0;}
@@ -360,7 +404,9 @@ public class MandyTree implements BTree {
     }
 
     /**
-     * Search the aim leafNode
+     * Search the aim leafNode and path
+     * @param key: search value
+     * @return: return the path of reach this leaf node
      */
     public Stack<Node> searchNode(Integer key) {
         Node pointer = root;
@@ -392,17 +438,25 @@ public class MandyTree implements BTree {
             height++;
         }
         else {
-            Stack<Node> searchPath = new Stack<>();
-            if (lastInsertPath == null || !easyInsert(lastInsertPath,key)){
+            Stack<Node> searchPath = null;
+            if (lastInsertPath != null) {searchPath = (Stack<Node>) lastInsertPath.clone();}
+            // if insert value is a little big larger than last insert then we do not need to refind the path
+            if (lastInsertPath == null || lastInsertKey > key || !easyInsert(lastInsertPath,key)){
                 searchPath = searchNode(key);
                 lastInsertPath = (Stack<Node>) searchPath.clone();
             }
-
+            lastInsertKey = key;
             // insert into leaf node
             insertAfterFindPath(searchPath, key);
         }
     }
 
+    /**
+     * if insert value is a little big larger than last insert then we do not need to refind the path
+     * @param lastInsertPath:
+     * @param key
+     * @return: return if can use the last insert path
+     */
     private Boolean easyInsert(Stack<Node> lastInsertPath, Integer key) {
         LeafNode lastInsertNode = (LeafNode) (lastInsertPath.peek());
         if (lastInsertNode.getNext() != null && lastInsertNode.getNext().getValues().get(0) > key) {
@@ -410,6 +464,12 @@ public class MandyTree implements BTree {
         }
         else {return false;}
     }
+
+    /**
+     * with the search path, insert into the tree
+     * @param searchPath
+     * @param key
+     */
     private void insertAfterFindPath(Stack<Node> searchPath, Integer key) {
         Node pointer = searchPath.pop();
         Node splitnode = ((LeafNode) pointer).insertLeaf(key, (LeafNode) pointer, DEGREE);
@@ -494,16 +554,19 @@ public class MandyTree implements BTree {
             int pos = btreeUtil.binarySearchChildren(pointer.getValues(), key1);
             pointer = ((IndexNode) pointer).getChildren().get(pos);
         }
+        // find out the leaf node
         leafNodeValues = pointer.getValues();
+        // find out the specific value in arraylist
         if (leafNodeValues.get(leafNodeValues.size() - 1) < key1) {
             return result;
         } else {
             int pos = btreeUtil.binarySearchChildren(leafNodeValues, key1) - 1;
             if (pos<0) {pos++;}
-            if (!leafNodeValues.get(pos).equals(key1)) {
+            else if (!leafNodeValues.get(pos).equals(key1)) {
                 pos++;
             }
 
+            // according to b+tree leaf node characteristic that can link to each other then find according to seqence
             while (leafNodeValues.get(pos) <= (int)key2) {
 
                 result.add(leafNodeValues.get(pos));
@@ -538,6 +601,9 @@ public class MandyTree implements BTree {
         System.out.printf("Average fill factor: %.2f%%\n", averageFillFactor);
     }
 
+    /**
+     * calculate average fill factor
+     */
     private void updateAverageFillFactor() {
 
         int totalValues = 0;
@@ -551,18 +617,30 @@ public class MandyTree implements BTree {
         while (!queue.isEmpty()) {
             Node node = queue.poll();
             totalValues += node.getValues().size();
-            totalCapacity += DEGREE * 2; // 假设每个节点的最大容量是 DEGREE * 2
+            totalCapacity += DEGREE * 2;
 
             if (node instanceof IndexNode) {
                 IndexNode indexNode = (IndexNode) node;
                 queue.addAll(indexNode.getChildren());
             }
         }
-
+        // if = 0 return 0
         averageFillFactor = totalCapacity == 0 ? 0 : (double) totalValues / totalCapacity * 100;
     }
 
+    /**
+     * print tree. Giving two kind of way to print tree: pyramid shape and class shape
+     */
     public void printTree() {
+        System.out.println("you can have two way to print tree");
+        System.out.print("input 1: print tree with pyramid; input 2: print with class: ");
+        Scanner in = new Scanner(System.in);
+        String input = in.nextLine();
+        if (input.equals("1")) {printTreePyramid();}
+        else {printTreeClass();}
+    }
+
+    public void printTreePyramid() {
         if (root == null) {
             System.out.println("The tree is empty.");
             return;
@@ -571,7 +649,7 @@ public class MandyTree implements BTree {
         Queue<Node> queue = new LinkedList<>();
         queue.add(root);
         int level = 0;
-        int maxLevel = getHeight(root);
+        int maxLevel = height;
 
         while (!queue.isEmpty()) {
             int levelSize = queue.size(); // Number of elements at the current level
@@ -582,7 +660,7 @@ public class MandyTree implements BTree {
                 printNode(current, level, maxLevel);
                 levelSize--;
 
-                // 如果是IndexNode，将子节点加入队列
+                // if IndexNode，add node to queue
                 if (current instanceof IndexNode) {
                     IndexNode indexNode = (IndexNode) current;
                     queue.addAll(indexNode.getChildren());
@@ -604,69 +682,81 @@ public class MandyTree implements BTree {
         }
     }
 
-    private int getHeight(Node root) {
-        if (root == null) {
-            return 0;
-        }
-        if (root instanceof LeafNode) {
-            return 1;
-        }
-        int maxHeight = 0;
-        IndexNode indexNode = (IndexNode) root;
-        for (Node child : indexNode.getChildren()) {
-            maxHeight = Math.max(maxHeight, getHeight(child));
-        }
-        return 1 + maxHeight;
-    }
 
     /**
      * Print tree from root
      */
-//    public void printTree() {
-//        if(root == null) {
-//            System.out.println("The tree is empty");
-//        }
-//        else {
-//            printTree(root);
-//        }
-//    }
-//
-//
-//    /**
-//     * print tree from node
-//     *
-//     * @param n starting node to print
-//     */
-//    public void printTree(Node n) {
-//        if (n == null) {
-//            System.out.println("The node is null.");
-//        } else {
-//            printSubtree(n, 0);
-//        }
-//    }
-//
-//    private void printSubtree(Node node, int indentation) {
-//        for (int i = 0; i < indentation; i++) {
-//            System.out.print("\t");
-//        }
-//        System.out.println(node.values);
-//
-//        if (node instanceof IndexNode) {
-//            IndexNode indexNode = (IndexNode) node;
-//            for (Node child : indexNode.getChildren()) {
-//                printSubtree(child, indentation + 1);
-//            }
-//        }
-//    }
+    public void printTreeClass() {
+        if(root == null) {
+            System.out.println("The tree is empty");
+        }
+        else {
+            printTree(root);
+        }
+    }
 
 
+    /**
+     * print tree from node
+     *
+     * @param n starting node to print
+     */
+    public void printTree(Node n) {
+        if (n == null) {
+            System.out.println("The node is null.");
+        } else {
+            printSubtree(n, 0);
+        }
+    }
+
+    private void printSubtree(Node node, int indentation) {
+        for (int i = 0; i < indentation; i++) {
+            System.out.print("\t");
+        }
+        System.out.println(node.values);
+
+        if (node instanceof IndexNode) {
+            IndexNode indexNode = (IndexNode) node;
+            for (Node child : indexNode.getChildren()) {
+                printSubtree(child, indentation + 1);
+            }
+        }
+    }
+
+
+    /**
+     * load data file at beginning
+     * @param datafilename
+     */
     @Override
     public void load(String datafilename) {
         try{
-            String[] readLines = readFile.readData(datafilename);
-            //Fill in you work here
-            for(String i : readLines) {
-                insert(new Integer(i));
+            System.out.println("if want to use default input file input 1");
+            System.out.println("if want to use other  input file input 2(please put your file in data folder)");
+            System.out.println("if want to use insert tree by yourself input 3(0 entry at beginning)");
+            System.out.print("input: ");
+            Scanner in = new Scanner(System.in);
+            String input = in.nextLine();
+            String[] readLines = null;
+            // giving three ways to load data 1: default file 2: custom file 3: not load file
+            switch (input) {
+                case "1":
+                    readLines = readFile.readData(datafilename);
+                    break;
+                case "2":
+//                    System.out.print("input absolute path of data folder: ");
+//                    String folderPath = in.nextLine();
+                    System.out.print("input file name: ");
+                    String filename = in.nextLine();
+                    readLines = readFile.readData("data/"+filename);
+                    break;
+                case "3":
+                    break;
+            }
+            if (input.equals("1") || input.equals("2")) {
+                for(String i : readLines) {
+                    insert(new Integer(i));
+                }
             }
         } catch(Exception e) {
             System.out.println("file not found");
