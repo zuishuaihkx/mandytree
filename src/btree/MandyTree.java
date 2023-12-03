@@ -43,22 +43,27 @@ public class MandyTree implements BTree {
 
         private List<Integer> values = new ArrayList<>();
 
+        // get node value
         public List<Integer> getValues() {
             return values;
         }
 
+        // add value according to new key value
         public void addValue(int key) {
             values.add(key);
         }
 
+        // add a list value to current node
         public void addValue(List<Integer> values) {
             this.values.addAll(values);
         }
 
+        // add a list value to specific location
         public void addValue(int index, List<Integer> values) {
             this.values.addAll(index, values);
         }
 
+        // add value to specific location
         public void addValue(int index, int value) {
             this.values.add(index,value);
         }
@@ -493,9 +498,10 @@ public class MandyTree implements BTree {
         if (leafNodeValues.get(leafNodeValues.size() - 1) < key1) {
             return result;
         } else {
-            int pos = btreeUtil.binarySearchChildren(leafNodeValues, key1);
-            if (leafNodeValues.get(pos).equals(key1)) {
-                pos--;
+            int pos = btreeUtil.binarySearchChildren(leafNodeValues, key1) - 1;
+            if (pos<0) {pos++;}
+            if (!leafNodeValues.get(pos).equals(key1)) {
+                pos++;
             }
 
             while (leafNodeValues.get(pos) <= (int)key2) {

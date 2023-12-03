@@ -215,7 +215,8 @@ public class CLI {
                         new Integer(words[1]));
 
                 if (result.isEmpty()) {
-                    System.out.println("No result for range " + tokens[1] + " - " + tokens[2]);
+                    //System.out.println("No result for range " + tokens[1] + " - " + tokens[2]);
+                    System.out.println("No result for range " + words[0] + " - " + words[1]);
                     return;
                 }
                 if (!gradingMode) {
@@ -234,6 +235,6 @@ public class CLI {
 
     }
 
-    private static boolean gradingMode = true;
+    private static boolean gradingMode = false;
     
 }
