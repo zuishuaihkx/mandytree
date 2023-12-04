@@ -172,6 +172,7 @@ public class CLI {
         //Do the update
         //Just time the update in grading
         if(gradingMode) Clock.start();
+        if(!gradingMode) Clock.start();
         try {
             for (String str : stringArray) {
                 String[] words = str.split("\\s+");
@@ -189,6 +190,8 @@ public class CLI {
             }
             if(gradingMode) Clock.stop();
             if(gradingMode) System.out.println("Elapsed Time (ms): " + Clock.getElapsedTimeInMilliSec());
+            if(!gradingMode) Clock.stop();
+            if(!gradingMode) System.out.println("Elapsed Time (ms): " + Clock.getElapsedTimeInMilliSec());
         } catch (Utils.TreeIsEmptyException e) {
             System.out.println(e.getMessage());
         }

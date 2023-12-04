@@ -209,6 +209,13 @@ public class MandyTree implements BTree {
                         borrower.setPrevious(this.previous);
                         this.previous.setNext(borrower);
                     }
+                    else {
+                        borrower.setPrevious(null);
+                    }
+
+                    this.next = null;
+                    this.previous = null;
+
                     int pos = btreeUtil.binarySearchIndex(parent.getValues(), oldindex);
                     parent.removeValue(pos);
                     parent.removeChildren(pos);
@@ -220,6 +227,13 @@ public class MandyTree implements BTree {
                         borrower.setNext(this.next);
                         this.next.setPrevious(borrower);
                     }
+                    else {
+                        borrower.setNext(null);
+                    }
+
+                    this.next = null;
+                    this.previous = null;
+
                     int pos = btreeUtil.binarySearchIndex(parent.getValues(), oldindex);
                     parent.removeValue(pos);
                     parent.removeChildren(pos+1);
@@ -459,7 +473,8 @@ public class MandyTree implements BTree {
      */
     private Boolean easyInsert(Stack<Node> lastInsertPath, Integer key) {
         LeafNode lastInsertNode = (LeafNode) (lastInsertPath.peek());
-        if (lastInsertNode.getNext() != null && lastInsertNode.getNext().getValues().get(0) > key) {
+        if (lastInsertNode.next == null) {return true;}
+        else if (lastInsertNode.getNext().getValues().get(0) > key) {
             return true;
         }
         else {return false;}
@@ -479,7 +494,7 @@ public class MandyTree implements BTree {
             indexEntries++;
             do{
                 totalNode++;
-                if (searchPath.isEmpty() ) { // no node in path means create node and take as root
+                if (searchPath.isEmpty() ) { // no node in path means create index node and take as root
                     IndexNode newRoot = new IndexNode();
                     newRoot.addValue(popUpkey);
                     newRoot.addChildren(pointer);
@@ -713,11 +728,21 @@ public class MandyTree implements BTree {
         for (int i = 0; i < indentation; i++) {
             System.out.print("\t");
         }
+        if (node instanceof LeafNode) {
+            System.out.print("Leaf: ");
+        } else if (node instanceof IndexNode) {
+            if (node == root) {System.out.print("Root: ");}
+            else {System.out.print("Internal: ");}
+        }
         System.out.println(node.values);
 
         if (node instanceof IndexNode) {
             IndexNode indexNode = (IndexNode) node;
             for (Node child : indexNode.getChildren()) {
+                for (int i = 0; i <= indentation; i++) {
+                    System.out.print("\t|");
+                }
+                System.out.println();
                 printSubtree(child, indentation + 1);
             }
         }
@@ -738,25 +763,30 @@ public class MandyTree implements BTree {
             Scanner in = new Scanner(System.in);
             String input = in.nextLine();
             String[] readLines = null;
+            String path = "";
             // giving three ways to load data 1: default file 2: custom file 3: not load file
             switch (input) {
                 case "1":
-                    readLines = readFile.readData(datafilename);
+                    path = datafilename;
                     break;
                 case "2":
 //                    System.out.print("input absolute path of data folder: ");
 //                    String folderPath = in.nextLine();
                     System.out.print("input file name: ");
                     String filename = in.nextLine();
-                    readLines = readFile.readData("data/"+filename);
+                    path = "data/"+filename;
                     break;
                 case "3":
                     break;
             }
             if (input.equals("1") || input.equals("2")) {
+                Clock.start();
+                readLines = readFile.readData(path);
                 for(String i : readLines) {
                     insert(new Integer(i));
                 }
+                Clock.stop();
+                System.out.println("Elapsed Time (ms): " + Clock.getElapsedTimeInMilliSec());
             }
         } catch(Exception e) {
             System.out.println("file not found");
